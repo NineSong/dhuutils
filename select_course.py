@@ -12,12 +12,13 @@ def course_name(course_id):
     pq = pyquery.PyQuery(
         url='http://jw.dhu.edu.cn/dhu/ftp/' + course_id[:2] + '/' + course_id + 'DG.htm'
     )
+    title = pq('title').html()
 
     try:
-        return pq('title').html().encode('iso-8859-1').decode('gb2312')
+        return title.encode('iso-8859-1').decode('gb2312')
     # Some pages declare that they use gb2312, but in reality they use unicode.
     except UnicodeEncodeError:
-        return pq('title').html()
+        return title
 
 class Student(object):
     def __init__(self, student_id, password):
@@ -33,13 +34,12 @@ class Student(object):
         if 'Location' not in response.headers:
             exit(u'用户名或密码错误')
 
-        response = self._session.get('http://jw.dhu.edu.cn/dhu/student/')
+        response = self._session.get('http://jw.dhu.edu.cn/dhu/student/modifyselfinfo.jsp')
         pq = pyquery.PyQuery(response.text)
-        print(response.text)
-        greeting = pq('table').eq(2)('td').eq(9).html()
+        name = pq('table')('td').eq(3).html()
 
-        if greeting:
-            print(u'学生姓名：' + greeting[:greeting.index(' ')])
+        if name:
+            print(u'学生姓名：' + name)
         else:
             print(u'学生姓名：未知')
 
@@ -72,7 +72,7 @@ class Student(object):
                 break
 
     def select_course(self, course_number):
-        response = self._session.get(
+        headers = self._session.get(
             'http://jw.dhu.edu.cn/dhu/servlet/com.collegesoft.eduadmin.tables.selectcourse.SelectCourseController',
             params={
                 'doWhat': 'selectcourse',
@@ -80,9 +80,9 @@ class Student(object):
                 'courseNo': course_number
             },
             allow_redirects=False
-        )
+        ).headers
 
-        return 'Location' in response.headers
+        return 'Location' in headers and headers['Location'][-8:] == 'Status=2'
 
 
 if __name__ == '__main__':
@@ -90,7 +90,6 @@ if __name__ == '__main__':
         exit()
 
     student = Student(sys.argv[1], sys.argv[2])
-    selected = False
 
     while 1:
         try:
