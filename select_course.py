@@ -51,6 +51,10 @@ class Student(object):
             params={'courseNo': course_number}
         )
         pq = pyquery.PyQuery(response.text)
+
+        if len(pq('tr')) == 0:
+            exit(u'选课未开放')
+
         course_id = pq('tr').eq(1)('td').eq(1).html()
 
         if course_id is None:
