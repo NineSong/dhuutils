@@ -6,11 +6,9 @@ import pyquery
 import time
 import sys
 
-# The course names locate in "http://jw.dhu.edu.cn/dhu/ftp/**/******DG.htm".
-# "******" is the course id and "**" is the first two digits of course id.
 def course_name(course_id):
     pq = pyquery.PyQuery(
-        url='http://jw.dhu.edu.cn/dhu/ftp/' + course_id[:2] + '/' + course_id + 'DG.htm'
+        url='http://jwdep.dhu.edu.cn/dhu/ftp/' + course_id[:2] + '/' + course_id + 'DG.htm'
     )
     title = pq('title').html()
 
@@ -26,7 +24,7 @@ class Student(object):
         self._password = password
         self._session = requests.Session()
         response = self._session.get(
-            'http://jw.dhu.edu.cn/dhu/login_wz.jsp',
+            'http://jwdep.dhu.edu.cn/dhu/login_wz.jsp',
             params={'userName': student_id, 'userPwd': password},
             allow_redirects=False
         )
@@ -34,39 +32,29 @@ class Student(object):
         if 'Location' not in response.headers:
             exit(u'用户名或密码错误')
 
-        response = self._session.get('http://jw.dhu.edu.cn/dhu/student/modifyselfinfo.jsp')
+        response = self._session.get('http://jwdep.dhu.edu.cn/dhu/student/modifyselfinfo.jsp')
         pq = pyquery.PyQuery(response.text)
         name = pq('table')('td').eq(3).html()
-
-        if name:
-            print(u'学生姓名：' + name)
-        else:
-            print(u'学生姓名：未知')
-
+        print(u'学生姓名：' + name)
         self._get_course_info(sys.argv[3])
 
     def _get_course_info(self, course_number):
         response = self._session.get(
-            'http://jw.dhu.edu.cn/dhu/student/selectcourse/selectcourse2.jsp',
+            'http://jwdep.dhu.edu.cn/dhu/student/selectcourse/selectcourse2.jsp',
             params={'courseNo': course_number}
         )
         pq = pyquery.PyQuery(response.text)
 
         if len(pq('tr')) == 0:
-            exit(u'选课未开放')
+            exit(u'选课未开放或课程不存在')
 
         course_id = pq('tr').eq(1)('td').eq(1).html()
-
-        if course_id is None:
-            exit(u'课程不存在')
-
         name = course_name(course_id)
         print(u'课程名称：' + name)
         print(u'课程编号：' + course_id)
-
         response = self._session.get(
-            'http://jw.dhu.edu.cn/dhu/commonquery/coursetimetableinfo.jsp',
-            params={'courseId': course_id, 'courseName': ''}
+            'http://jwdep.dhu.edu.cn/dhu/commonquery/coursetimetableinfo.jsp',
+            params={'courseId': course_id}
         )
         pq = pyquery.PyQuery(response.text)
 
@@ -77,7 +65,7 @@ class Student(object):
 
     def select_course(self, course_number):
         headers = self._session.get(
-            'http://jw.dhu.edu.cn/dhu/servlet/com.collegesoft.eduadmin.tables.selectcourse.SelectCourseController',
+            'http://jwdep.dhu.edu.cn/dhu/servlet/com.collegesoft.eduadmin.tables.selectcourse.SelectCourseController',
             params={
                 'doWhat': 'selectcourse',
                 'courseName': '',
@@ -91,7 +79,7 @@ class Student(object):
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
-        exit()
+        exit(u'用法：' + sys.argv[0] + u' 学号 教务密码 选课序号')
 
     student = Student(sys.argv[1], sys.argv[2])
 
@@ -101,7 +89,7 @@ if __name__ == '__main__':
                 exit(u'选课成功')
             else:
                 print(u'选课失败')
-                time.sleep(0.8)
+                time.sleep(1)
         except requests.exceptions.RequestException:
             print(u'网络连接失败')
             time.sleep(3)
