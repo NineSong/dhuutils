@@ -5,7 +5,7 @@ import pyquery
 
 def courseName(course_id):
     pq = pyquery.PyQuery(
-        url='http://jwdep.dhu.edu.cn/dhu/ftp/' + course_id[:2] + '/' + course_id + 'DG.htm'
+        'http://jwdep.dhu.edu.cn/dhu/ftp/' + course_id[:2] + '/' + course_id + 'DG.htm'
     )
     title = pq('title').html()
 
@@ -92,3 +92,36 @@ class Student(object):
         )
         pq = pyquery.PyQuery(response.text)
         return len(pq('table').eq(2).children('tr')) != len(self.course)
+
+    def scoreReport(self, term):
+        response = self._session.get(
+            'http://jwdep.dhu.edu.cn/dhu/admin/score/classscorelist.jsp',
+            params={'yearTerm': term},
+            allow_redirects=False
+        )
+
+        if 'Location' in response.headers:
+            return ''
+
+        pq = pyquery.PyQuery(response.text)
+
+        if len(pq('table')):
+            return '<meta charset="utf-8">' + pq('div').eq(1).outerHtml() + pq('table').eq(1).outerHtml()
+
+        return ''
+
+    def schedule(self, term):
+        response = self._session.post(
+            'http://jwdep.dhu.edu.cn/dhu/student/studentcoursetable.jsp',
+            data={'yt': term},
+        )
+        pq = pyquery.PyQuery(response.text)
+        terms = []
+
+        for i in pq('option'):
+            terms.append(pq(i).html())
+
+        if term in terms:
+            return '<meta charset="utf-8">' + pq('div').eq(1).outerHtml() + pq('table').eq(1).outerHtml()
+        else:
+            return ''
